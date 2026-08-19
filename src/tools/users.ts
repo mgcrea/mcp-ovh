@@ -29,6 +29,54 @@ const userPath = (
   suffix = "",
 ): string => client.projectPath(project, `/user/${encodeSegment(String(userId))}${suffix}`);
 
+type Rec = Record<string, unknown>;
+
+const defaultSleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+export type WaitForUserOptions = {
+  intervalMs?: number;
+  maxAttempts?: number;
+  /** Injectable for tests. */
+  sleep?: (ms: number) => Promise<void>;
+};
+
+/**
+ * Block until a project user is actually usable.
+ *
+ * OVH creates a project user ASYNCHRONOUSLY: the POST answers immediately with
+ * an id and `status: "creating"`, and for the next few seconds the user is a
+ * half-thing — `GET .../user/{id}` returns it, but every write against that id
+ * (attaching its policy, minting S3 credentials) fails with a flatly misleading
+ * `404 user {id} not found`. Poll until the status flips to `ok`.
+ */
+export const waitForUserReady = async (
+  client: OvhClient,
+  project: string | undefined,
+  userId: number,
+  opts: WaitForUserOptions = {},
+): Promise<Rec> => {
+  const intervalMs = opts.intervalMs ?? 1000;
+  const maxAttempts = opts.maxAttempts ?? 30;
+  const sleep = opts.sleep ?? defaultSleep;
+
+  let status: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const user = await client.get<Rec>(userPath(client, project, userId));
+    status = user.status;
+    if (status === "ok") return user;
+    if (status === "deleted" || status === "deleting") {
+      throw new Error(`Project user ${userId} is being deleted (status '${String(status)}').`);
+    }
+    await sleep(intervalMs);
+  }
+  throw new Error(
+    `Project user ${userId} was still '${String(status)}' after ` +
+      `${maxAttempts} checks over ~${Math.round((maxAttempts * intervalMs) / 1000)}s. ` +
+      `OVH provisions users asynchronously; check the OVH console before retrying.`,
+  );
+};
+
 export const registerUserTools = (
   server: McpServer,
   client: OvhClient,
@@ -83,7 +131,11 @@ export const registerUserTools = (
         "policy cannot restrict a bucket's owner, a write-only or read-only key must belong to " +
         "a user that did NOT create the bucket. " +
         "`objectstore_operator` is the role for object storage. Creating a user also mints an " +
-        "OpenStack password, which is returned once and never again.",
+        "OpenStack password, which is returned once and never again. " +
+        'The user is created ASYNCHRONOUSLY and comes back with `status: "creating"` — for the ' +
+        "next few seconds any write against its id (policy, S3 credentials) fails with a " +
+        "misleading `404 user not found`. Poll `ovh_get_project_user` until the status is `ok`, " +
+        "or use `ovh_provision_s3_user`, which waits for you.",
       inputSchema: {
         project: projectArg,
         description: z
@@ -114,7 +166,8 @@ export const registerUserTools = (
         "Mint a new S3 access key + secret for a project user. " +
         "THE SECRET IS RETURNED HERE AND CAN BE RE-READ ONLY VIA `ovh_reveal_s3_secret` — " +
         "capture it now. The key inherits whatever the user's storage policy allows, so set " +
-        "the policy BEFORE handing the key out.",
+        "the policy BEFORE handing the key out. " +
+        "A just-created user returns `404 user not found` here until its status reaches `ok`.",
       inputSchema: { project: projectArg, userId: userIdArg },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },

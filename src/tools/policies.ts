@@ -10,6 +10,7 @@ import {
   POLICY_PRESETS,
   type PolicyPreset,
 } from "../storage/policy.js";
+import { waitForUserReady } from "./users.js";
 import { bucketArg, compact, confirmArg, projectArg, regionArg, userIdArg, wrap } from "./util.js";
 
 type Rec = Record<string, unknown>;
@@ -216,18 +217,22 @@ export const registerPolicyTools = (
           );
         }
 
-        const user =
-          userId !== undefined
-            ? { id: userId, reused: true }
-            : ((await client.post<Rec>(
+        const created =
+          userId === undefined
+            ? await client.post<Rec>(
                 client.projectPath(project, "/user"),
                 compact({ description, role: "objectstore_operator" }),
-              )) as Rec);
+              )
+            : undefined;
 
-        const newUserId = Number(user.id);
-        if (!Number.isFinite(newUserId)) {
+        const newUserId = created ? Number(created.id) : userId;
+        if (typeof newUserId !== "number" || !Number.isFinite(newUserId)) {
           throw new Error(`Could not determine the new user's id from OVH's response.`);
         }
+
+        // OVH provisions the user asynchronously. Until its status reaches `ok`,
+        // writing its policy fails with a misleading `404 user not found`.
+        const user = await waitForUserReady(client, project, newUserId);
 
         // Policy BEFORE credentials: a key that exists for even a moment with no
         // policy is a key that briefly had whatever the default allows.
@@ -247,6 +252,7 @@ export const registerPolicyTools = (
             id: newUserId,
             username: user.username,
             description: user.description ?? description,
+            status: user.status,
             created: userId === undefined,
           },
           policy: { preset: preset as PolicyPreset, grants: describePreset(preset), document },

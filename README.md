@@ -1,5 +1,8 @@
 # @mgcrea/mcp-ovh-api
 
+[![npm version](https://img.shields.io/npm/v/@mgcrea/mcp-ovh-api.svg?style=for-the-badge)](https://www.npmjs.com/package/@mgcrea/mcp-ovh-api)
+[![GHCR](https://img.shields.io/badge/ghcr.io-container_image-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/mgcrea/mcp-ovh-api/pkgs/container/mcp-ovh-api)
+
 A [Model Context Protocol](https://modelcontextprotocol.io) server for the **OVHcloud API**,
 focused on **Object Storage**: buckets, objects, project users, S3 credentials and the
 storage policies that tie them together.
@@ -10,7 +13,7 @@ off — they are never registered, so an agent cannot call them at all.
 ## Features
 
 - Curated tools over OVHcloud's `/1.0` API with descriptions that spell out its traps (see
-  [Two traps worth knowing](#two-traps-worth-knowing)).
+  [Traps worth knowing](#traps-worth-knowing)).
 - **Read-only by default.** `OVH_ALLOW_WRITES=1` adds the write tools; the destructive ones
   then additionally require an explicit `confirm: true` on every call.
 - All three OVH auth methods, picked automatically from whichever env vars are present:
@@ -120,9 +123,9 @@ Add to `.mcp.json` (project) or `~/.claude.json` (global):
 npx @modelcontextprotocol/inspector node dist/cli.js
 ```
 
-## Two traps worth knowing
+## Traps worth knowing
 
-Both are baked into the tool descriptions, but they explain the shape of this server:
+All are baked into the tool descriptions, but they explain the shape of this server:
 
 1. **OVH has no bucket policies — only _user_ policies.** One raw JSON document per project
    user, and that document is the entire access-control surface. Setting a policy replaces
@@ -133,8 +136,19 @@ Both are baked into the tool descriptions, but they explain the shape of this se
    belong to a **new project user** that did not create the bucket. `ovh_provision_s3_user`
    checks the bucket's `ownerId` and refuses when you point it at the owner.
 
-A third, smaller one: `s3:PutObject` alone still permits blind **overwrite** of existing keys
-inside the allowed prefix. A "write-only" key is not an append-only key.
+3. **The same fallback applies per object.** Whoever uploads an object _owns_ it and gets
+   `FULL_CONTROL` on it through the object ACL. So merely _omitting_ `s3:GetObject` does
+   **not** stop an upload-only key from reading back everything it wrote — verified against
+   the live API, where a bare allow-list policy happily served the key its own uploads while
+   correctly denying every object someone else had uploaded. An explicit `Deny` **is**
+   required, and it does beat the ACL. That is why the `write-only` preset ships a `Deny`
+   statement rather than a bare allow-list.
+
+Two smaller ones. `s3:PutObject` alone still permits blind **overwrite** of existing keys
+inside the allowed prefix — a "write-only" key is not an append-only key, which is a good
+reason to enable versioning on the bucket. And **policy changes take up to ~30 seconds to
+propagate**: a probe run five seconds after `ovh_set_storage_policy` still shows the old
+behaviour, which reads exactly like a policy that silently failed.
 
 ## Tools
 
@@ -164,16 +178,20 @@ mints a time-limited presigned S3 URL instead. With writes off it signs `GET` on
 `ovh_preview_policy`, `ovh_set_storage_policy` and `ovh_provision_s3_user` share three
 presets, all scopable to a key prefix:
 
-| Preset       | Grants                                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------ |
-| `write-only` | `s3:PutObject`, `s3:AbortMultipartUpload`, `s3:ListMultipartUploadParts` on the object ARN |
-| `read-only`  | `s3:ListBucket` + `s3:GetBucketLocation` on the bucket, `s3:GetObject` on the objects      |
-| `read-write` | both, plus `s3:DeleteObject`                                                               |
+| Preset       | Grants                                                                                                                                                                       |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `write-only` | Allow `s3:PutObject`, `s3:AbortMultipartUpload`, `s3:ListMultipartUploadParts` on the prefix — **plus an explicit `Deny` on `s3:GetObject` / `s3:GetObjectAcl` bucket-wide** |
+| `read-only`  | `s3:ListBucket` + `s3:GetBucketLocation` on the bucket, `s3:GetObject` on the objects                                                                                        |
+| `read-write` | both, plus `s3:DeleteObject`                                                                                                                                                 |
 
 OVH's built-in roles (`admin`, `deny`, `readOnly`, `readWrite`, via `ovh_grant_bucket_access`)
 have no write-only equivalent — that is why the raw-policy path exists. The multipart pair is
 included deliberately: every S3 SDK auto-switches to multipart above ~8-16MB, and without
 abort/list a failed upload orphans parts the key holder cannot clean up and keeps paying for.
+
+OVH validates policy actions against a fixed enum and rejects the **whole document** with a
+400 if one is unknown — `s3:GetObjectVersion` and `s3:DeleteObjectVersion` exist in AWS but
+not there. The presets use only accepted actions, and a test pins that.
 
 ### Handing out a write-only upload key
 
@@ -192,17 +210,23 @@ mints credentials — a key that exists before its policy is a key that briefly 
 default allows. The secret is returned once.
 
 Verify against the real S3 API before handing it over — a policy that reads correctly can
-still be shadowed by bucket ownership:
+still be shadowed by ownership, and **wait ~30s after setting it** or you will be probing the
+previous policy:
 
 ```bash
 export AWS_ACCESS_KEY_ID=... AWS_SECRET_ACCESS_KEY=...
-S3='aws --endpoint-url https://s3.uk.io.cloud.ovh.net --region uk'
-$S3 s3api put-object    --bucket dev-rgis-ar --key uploads/probe.txt --body /dev/null  # 200
-$S3 s3api get-object    --bucket dev-rgis-ar --key uploads/probe.txt /dev/null         # 403
-$S3 s3api list-objects-v2 --bucket dev-rgis-ar                                          # 403
-$S3 s3api delete-object --bucket dev-rgis-ar --key uploads/probe.txt                    # 403
-$S3 s3api put-object    --bucket dev-rgis-ar --key elsewhere/probe.txt --body /dev/null # 403
+# An array, not a string: zsh does not word-split an unquoted $var, so the
+# `S3='aws ...'` form you would write in bash silently becomes "command not found".
+S3=(aws --endpoint-url https://s3.uk.io.cloud.ovh.net --region uk s3api)
+"${S3[@]}" put-object      --bucket dev-rgis-ar --key uploads/probe.txt --body /dev/null   # 200
+"${S3[@]}" get-object      --bucket dev-rgis-ar --key uploads/probe.txt /dev/null          # 403
+"${S3[@]}" list-objects-v2 --bucket dev-rgis-ar                                            # 403
+"${S3[@]}" delete-object   --bucket dev-rgis-ar --key uploads/probe.txt                    # 403
+"${S3[@]}" put-object      --bucket dev-rgis-ar --key elsewhere/probe.txt --body /dev/null # 403
 ```
+
+The `get-object` line is the one that matters: it is the check that catches trap 3, and it
+passes only because of the preset's `Deny`.
 
 ## Develop
 

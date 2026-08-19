@@ -3,9 +3,11 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { staticAuthProvider } from "../src/client/auth.js";
+import { OvhClient } from "../src/client/ovh.js";
 import type { Config } from "../src/config.js";
 import { createServer } from "../src/server.js";
 import { assertSafePath } from "../src/tools/request.js";
+import { waitForUserReady } from "../src/tools/users.js";
 
 const baseConfig: Config = {
   endpoint: "ovh-eu",
@@ -49,6 +51,8 @@ const enumOf = async (
   const properties = found.inputSchema.properties as Record<string, { enum?: string[] }>;
   return properties[prop]?.enum;
 };
+
+const PROJECT_BASE = "https://eu.api.ovh.com/1.0/cloud/project/abcdef0123456789abcdef0123456789";
 
 const payloadOf = (result: unknown): Record<string, unknown> =>
   JSON.parse((result as { content: { text: string }[] }).content[0]!.text);
@@ -286,7 +290,8 @@ describe("ovh_provision_s3_user", () => {
     const fetchImpl = vi
       .fn<() => Promise<Response>>()
       .mockResolvedValueOnce(jsonResponse({ name: "dev-rgis-ar", ownerId: 1, region: "UK" }))
-      .mockResolvedValueOnce(jsonResponse({ id: 9001, username: "user-9001" }))
+      .mockResolvedValueOnce(jsonResponse({ id: 9001, username: "user-9001", status: "creating" }))
+      .mockResolvedValueOnce(jsonResponse({ id: 9001, username: "user-9001", status: "ok" }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }))
       .mockResolvedValueOnce(jsonResponse({ access: "AK123", secret: "SK456" }));
     const client = await connect(
@@ -310,8 +315,11 @@ describe("ovh_provision_s3_user", () => {
     // Order matters: a key that exists before its policy is a key that briefly
     // had whatever the default allows.
     expect(urls[1]).toContain("/user");
-    expect(urls[2]).toContain("/user/9001/policy");
-    expect(urls[3]).toContain("/user/9001/s3Credentials");
+    // The readiness poll sits between the create and the policy: OVH 404s the
+    // policy write while the user is still "creating".
+    expect(urls[2]).toBe(`${PROJECT_BASE}/user/9001`);
+    expect(urls[3]).toContain("/user/9001/policy");
+    expect(urls[4]).toContain("/user/9001/s3Credentials");
 
     const payload = payloadOf(result) as Record<string, Record<string, unknown>>;
     expect(payload.credentials).toMatchObject({
@@ -320,5 +328,60 @@ describe("ovh_provision_s3_user", () => {
       endpoint: "https://s3.uk.io.cloud.ovh.net",
     });
     expect(payload.user).toMatchObject({ id: 9001, created: true });
+  });
+});
+
+const bareClient = (fetchImpl: ReturnType<typeof vi.fn>): OvhClient =>
+  new OvhClient({
+    baseUrl: "https://eu.api.ovh.com/1.0",
+    auth: staticAuthProvider(),
+    defaultProject: "proj",
+    fetch: fetchImpl as unknown as typeof fetch,
+  });
+
+describe("waitForUserReady", () => {
+  it("polls until OVH flips the status to ok", async () => {
+    // OVH answers the create immediately, but the user is a half-thing for a few
+    // seconds: writes against its id 404 with a misleading "user not found".
+    const fetchImpl = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({ id: 1, status: "creating" }))
+      .mockResolvedValueOnce(jsonResponse({ id: 1, status: "creating" }))
+      .mockResolvedValueOnce(jsonResponse({ id: 1, status: "ok", username: "user-x" }));
+    const sleep = vi.fn(async () => {});
+
+    const user = await waitForUserReady(bareClient(fetchImpl), "proj", 1, { sleep });
+
+    expect(user).toMatchObject({ status: "ok", username: "user-x" });
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(sleep).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns at once for a user that is already ok", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ id: 1, status: "ok" }));
+    const sleep = vi.fn(async () => {});
+
+    await waitForUserReady(bareClient(fetchImpl), "proj", 1, { sleep });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("gives up rather than polling forever", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ id: 1, status: "creating" }));
+
+    await expect(
+      waitForUserReady(bareClient(fetchImpl), "proj", 1, { maxAttempts: 3, sleep: async () => {} }),
+    ).rejects.toThrow(/still 'creating' after 3 checks/);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("fails fast on a user that is being deleted", async () => {
+    const fetchImpl = vi.fn(async () => jsonResponse({ id: 1, status: "deleting" }));
+
+    await expect(
+      waitForUserReady(bareClient(fetchImpl), "proj", 1, { sleep: async () => {} }),
+    ).rejects.toThrow(/being deleted/);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

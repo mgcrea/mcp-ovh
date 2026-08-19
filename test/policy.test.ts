@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { buildPolicy, encodePolicy, POLICY_PRESETS } from "../src/storage/policy.js";
 
+/** Actions the policy ALLOWS — Deny statements are counted separately. */
 const actions = (preset: (typeof POLICY_PRESETS)[number], prefix?: string): string[] =>
-  buildPolicy({ bucket: "dev-rgis-ar", preset, prefix }).Statement.flatMap((s) => s.Action);
+  buildPolicy({ bucket: "dev-rgis-ar", preset, prefix })
+    .Statement.filter((s) => s.Effect === "Allow")
+    .flatMap((s) => s.Action);
 
 describe("write-only preset", () => {
   it("grants no read of any kind", () => {
@@ -40,6 +43,51 @@ describe("write-only preset", () => {
   it("tolerates a leading slash on the prefix", () => {
     const doc = buildPolicy({ bucket: "b", preset: "write-only", prefix: "/uploads/" });
     expect(doc.Statement[0]?.Resource).toEqual(["arn:aws:s3:::b/uploads/*"]);
+  });
+
+  it("explicitly DENIES read-back across the whole bucket", () => {
+    // Verified against the live API: omitting s3:GetObject is not enough. The
+    // uploader owns what it uploads and the object ACL grants the owner
+    // FULL_CONTROL, so an allow-list-only policy still lets the key GET back
+    // everything it wrote. An explicit Deny does win over that ACL.
+    const doc = buildPolicy({ bucket: "dev-rgis-ar", preset: "write-only", prefix: "uploads/" });
+    const deny = doc.Statement.find((s) => s.Effect === "Deny");
+    expect(deny?.Action).toEqual(["s3:GetObject", "s3:GetObjectAcl"]);
+    // Bucket-wide, not prefix-scoped: reading outside the prefix is no better.
+    expect(deny?.Resource).toEqual(["arn:aws:s3:::dev-rgis-ar/*"]);
+  });
+
+  it("uses only actions OVH's policy validator accepts", () => {
+    // OVH rejects the whole document with a 400 on an unknown action, and its
+    // enum omits AWS staples like s3:GetObjectVersion.
+    const OVH_ACTIONS = new Set([
+      "s3:AbortMultipartUpload",
+      "s3:DeleteObject",
+      "s3:GetBucketLocation",
+      "s3:GetObject",
+      "s3:GetObjectAcl",
+      "s3:ListBucket",
+      "s3:ListMultipartUploadParts",
+      "s3:PutObject",
+    ]);
+    for (const preset of POLICY_PRESETS) {
+      for (const statement of buildPolicy({ bucket: "b", preset }).Statement) {
+        for (const action of statement.Action) {
+          expect(OVH_ACTIONS.has(action), `${preset}: ${action}`).toBe(true);
+        }
+      }
+    }
+  });
+});
+
+describe("read-only and read-write presets", () => {
+  it("carry no Deny statement — only write-only needs one", () => {
+    for (const preset of ["read-only", "read-write"] as const) {
+      const denies = buildPolicy({ bucket: "b", preset }).Statement.filter(
+        (s) => s.Effect === "Deny",
+      );
+      expect(denies, preset).toHaveLength(0);
+    }
   });
 });
 

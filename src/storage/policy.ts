@@ -11,6 +11,12 @@
  *    there is no explicit allow in the policy file, the user will be authorized".
  *    A restricted key must therefore belong to a NEW project user that did not
  *    create the bucket. Check the bucket's `ownerId` first.
+ * 3. **The same fallback applies per OBJECT.** Whoever uploads an object OWNS it
+ *    and gets FULL_CONTROL on it through the object ACL, so merely *omitting*
+ *    `s3:GetObject` does NOT stop a write-only key from reading back its own
+ *    uploads. Verified against the live API: an explicit `Deny` is required, and
+ *    it does win over the ACL. This is why `write-only` carries a Deny statement
+ *    rather than a bare allow-list.
  *
  * OVH's own role shortcut (`POST .../storage/{name}/policy/{userId}`) offers only
  * admin | deny | readOnly | readWrite. There is no write-only role, which is why
@@ -57,6 +63,13 @@ const objectArn = (bucket: string, prefix?: string): string =>
 // keep billing.
 const MULTIPART_ACTIONS = ["s3:AbortMultipartUpload", "s3:ListMultipartUploadParts"];
 
+/**
+ * OVH validates policy actions against a fixed enum and rejects the whole
+ * document with a 400 if one is unknown. Notable absentees that exist in AWS:
+ * `s3:GetObjectVersion` and `s3:DeleteObjectVersion`.
+ */
+const DENIED_READ_ACTIONS = ["s3:GetObject", "s3:GetObjectAcl"];
+
 /** Build the raw policy document for a preset. */
 export const buildPolicy = (opts: BuildPolicyOptions): PolicyDocument => {
   const { bucket, preset, prefix } = opts;
@@ -94,6 +107,19 @@ export const buildPolicy = (opts: BuildPolicyOptions): PolicyDocument => {
     });
   }
 
+  if (preset === "write-only") {
+    // Not redundant with the omitted allow. The uploader owns what it uploads
+    // and the object ACL grants the owner FULL_CONTROL, so without this an
+    // "upload-only" key can still GET back everything it ever wrote. The Deny is
+    // bucket-wide on purpose: reading outside the prefix is no more acceptable.
+    statements.push({
+      Sid: "DenyReadBack",
+      Effect: "Deny",
+      Action: DENIED_READ_ACTIONS,
+      Resource: [`${bucketArn(bucket)}/*`],
+    });
+  }
+
   return { Version: "2012-10-17", Statement: statements };
 };
 
@@ -109,7 +135,7 @@ export const encodePolicy = (document: PolicyDocument | unknown): { policy: stri
 export const describePreset = (preset: PolicyPreset): string => {
   switch (preset) {
     case "write-only":
-      return "PutObject + multipart abort/list. No GetObject, no ListBucket, no DeleteObject — but note PutObject alone still permits blind OVERWRITE of an existing key inside the prefix.";
+      return "PutObject + multipart abort/list inside the prefix, plus an explicit Deny on GetObject/GetObjectAcl across the whole bucket — without that Deny the key could read back its own uploads, because the uploader owns them. No ListBucket, no DeleteObject. Note PutObject alone still permits blind OVERWRITE of an existing key inside the prefix.";
     case "read-only":
       return "ListBucket + GetBucketLocation on the bucket, GetObject on the objects. No writes.";
     case "read-write":
