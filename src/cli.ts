@@ -2,7 +2,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { BUILD_INFO } from "./build-info.js";
-import { loadConfig } from "./config.js";
+import { isConfigured, loadConfig, setupInstructions } from "./config.js";
 import { createServer } from "./server.js";
 
 const stderrLogger = {
@@ -22,10 +22,14 @@ const main = async (): Promise<void> => {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   stderrLogger.warn(
-    `ovh-api-mcp connected (endpoint=${config.endpoint}, auth=${config.authMethod}, ` +
+    `ovh-api-mcp connected (endpoint=${config.endpoint}, auth=${config.authMethod ?? "MISSING"}, ` +
       `project=${config.cloudProject ?? "-"}, region=${config.region ?? "-"}, ` +
       `writes=${config.allowWrites ? "ENABLED" : "disabled"})`,
   );
+  if (!isConfigured(config)) {
+    stderrLogger.warn("  not configured — only ovh_auth_status is available:");
+    for (const line of setupInstructions(config)) stderrLogger.warn(`  ${line}`);
+  }
 
   const shutdown = (signal: string): void => {
     stderrLogger.warn(`received ${signal}, shutting down`);

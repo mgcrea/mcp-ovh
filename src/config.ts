@@ -34,7 +34,8 @@ const ConfigSchema = z
     endpoint: z.enum(ENDPOINT_NAMES).default("ovh-eu"),
     /** Absolute API base, derived from `endpoint` unless OVH_API_URL overrides it. */
     baseUrl: z.url("OVH_API_URL must be a valid URL, e.g. https://eu.api.ovh.com/1.0"),
-    authMethod: z.enum(AUTH_METHODS),
+    /** Undefined when nothing is configured — see the note on loadConfig. */
+    authMethod: z.enum(AUTH_METHODS).optional(),
     clientId: z.string().min(1).optional(),
     clientSecret: z.string().min(1).optional(),
     applicationKey: z.string().min(1).optional(),
@@ -50,6 +51,7 @@ const ConfigSchema = z
     refreshSkewSeconds: z.number().int().nonnegative().max(300).default(60),
   })
   .superRefine((cfg, ctx) => {
+    if (cfg.authMethod === undefined) return; // unconfigured is a state, not an error
     if (cfg.authMethod === "oauth2" && !(cfg.clientId && cfg.clientSecret)) {
       ctx.addIssue({
         code: "custom",
@@ -111,15 +113,17 @@ const trimmed = (value: string | undefined): string | undefined => {
   return t ? t : undefined;
 };
 
+/**
+ * Never throws for "nothing is configured".
+ *
+ * An MCP server that exits at startup shows up in the client as a bare
+ * `MCP error -32000: Connection closed`, with stderr swallowed — so the one
+ * message that would have explained what to set never reaches anyone. The
+ * server stays up instead, registers ovh_auth_status, and reports the gap as
+ * data the caller can act on.
+ */
 export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
   const authMethod = inferAuthMethod(env);
-  if (!authMethod) {
-    throw new Error(
-      "No OVHcloud credentials found. Set one of: OVH_CLIENT_ID + OVH_CLIENT_SECRET (OAuth2, " +
-        "recommended), OVH_APPLICATION_KEY + OVH_APPLICATION_SECRET + OVH_CONSUMER_KEY " +
-        "(application key), or OVH_ACCESS_TOKEN.",
-    );
-  }
   const endpoint = (trimmed(env.OVH_ENDPOINT) ?? "ovh-eu") as EndpointName;
   if (!(endpoint in ENDPOINTS)) {
     throw new Error(
@@ -142,4 +146,37 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     maxRetries: parseIntOpt(env.OVH_MAX_RETRIES),
     refreshSkewSeconds: parseIntOpt(env.OVH_REFRESH_SKEW_SECONDS),
   });
+};
+
+/** True once the server has a complete set of credentials for its auth method. */
+export const isConfigured = (config: Config): boolean => {
+  switch (config.authMethod) {
+    case "oauth2":
+      return Boolean(config.clientId && config.clientSecret);
+    case "signature":
+      return Boolean(config.applicationKey && config.applicationSecret && config.consumerKey);
+    case "accessToken":
+      return Boolean(config.accessToken);
+    default:
+      return false;
+  }
+};
+
+/**
+ * Returned by ovh_auth_status and printed to stderr at startup. Prose rather
+ * than a code, because this is the text someone acts on when nothing works.
+ */
+export const setupInstructions = (config: Config): string[] => {
+  if (isConfigured(config)) return [];
+  return [
+    "No OVHcloud credentials found. Pick one method:",
+    "(A) OAuth2 service account, recommended — create one at " +
+      "https://www.ovh.com/manager/#/iam/service-account, attach an IAM policy, then set " +
+      "OVH_CLIENT_ID + OVH_CLIENT_SECRET.",
+    "(B) Application key triplet — create it in one shot at https://eu.api.ovh.com/createToken/ " +
+      "(the access rules you list there are fixed forever), then set OVH_APPLICATION_KEY + " +
+      "OVH_APPLICATION_SECRET + OVH_CONSUMER_KEY.",
+    "(C) A pre-minted token in OVH_ACCESS_TOKEN.",
+    "Then restart the server.",
+  ];
 };

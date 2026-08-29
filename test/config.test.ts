@@ -6,6 +6,8 @@ import {
   loadConfig,
   oauth2TokenUrl,
   resolveBaseUrl,
+  isConfigured,
+  setupInstructions,
 } from "../src/config.js";
 
 const oauth2Env = { OVH_CLIENT_ID: "cid", OVH_CLIENT_SECRET: "csecret" };
@@ -75,8 +77,24 @@ describe("loadConfig", () => {
     expect(loadConfig({ ...oauth2Env, OVH_ALLOW_WRITES: "true" }).allowWrites).toBe(true);
   });
 
-  it("explains itself when no credentials are set", () => {
-    expect(() => loadConfig({})).toThrow(/No OVHcloud credentials found/);
+  it("does not throw with no credentials, so the server can still start", () => {
+    // It used to throw. A server that exits at startup surfaces in the client
+    // as a bare "MCP error -32000: Connection closed" with stderr swallowed, so
+    // the message explaining what to configure never reaches anyone. Missing
+    // configuration is now a state, reported through ovh_auth_status.
+    const cfg = loadConfig({});
+    expect(cfg.authMethod).toBeUndefined();
+    expect(isConfigured(cfg)).toBe(false);
+    const steps = setupInstructions(cfg).join(" ");
+    expect(steps).toContain("OVH_CLIENT_ID");
+    expect(steps).toContain("OVH_APPLICATION_KEY");
+    expect(steps).toContain("restart");
+  });
+
+  it("reports configured once a full credential set is present", () => {
+    const cfg = loadConfig({ OVH_CLIENT_ID: "id", OVH_CLIENT_SECRET: "sec" });
+    expect(isConfigured(cfg)).toBe(true);
+    expect(setupInstructions(cfg)).toEqual([]);
   });
 
   it("requires the full triplet for the signature method", () => {

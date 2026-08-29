@@ -242,6 +242,19 @@ export const createAuthProvider = (opts: AuthProviderOptions): AuthProvider => {
       return signatureProvider(opts);
     case "accessToken":
       return accessTokenProvider(opts.config);
+    default:
+      // Unconfigured. The provider is still built so createServer stays total,
+      // but no credential-requiring tool is registered, so it is never asked
+      // for headers — and if something ever does ask, the message says why.
+      return {
+        method: "accessToken",
+        async headers(): Promise<Record<string, string>> {
+          throw new Error(
+            "No OVHcloud credentials are configured. Call ovh_auth_status to see what to set.",
+          );
+        },
+        invalidate() {},
+      };
   }
 };
 
