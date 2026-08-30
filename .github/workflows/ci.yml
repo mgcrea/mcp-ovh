@@ -42,6 +42,21 @@ jobs:
         run: pnpm run test
       - name: Build 📦
         run: pnpm run build
+      - name: Package is publishable 🔍
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            if (pkg.private) {
+              console.error("package.json has \"private\": true — npm publish and the release job will both refuse it.");
+              process.exit(1);
+            }
+            if (!pkg.publishConfig || pkg.publishConfig.access !== "public") {
+              console.error("a scoped package needs publishConfig.access = \"public\".");
+              process.exit(1);
+            }
+            console.log(`publishable: ${pkg.name}@${pkg.version}`);
+          '
+
       # The tool list is the server's public contract and is easy to change by
       # accident. Run with NO credentials: the server must still speak MCP over
       # stdio and answer tools/list. A server that exits here shows in the client
@@ -61,14 +76,75 @@ jobs:
           ! grep -q '"name":"ovh_delete' /tmp/tools.json \
             || { echo "gated tools leaked without credentials"; exit 1; }
 
+  publish-npm:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    # id-token: write is required for OIDC trusted publishing + provenance
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v5
+      - name: Setup pnpm 🔧
+        uses: pnpm/action-setup@v6
+      - name: Setup node 🔧
+        uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: "pnpm"
+          registry-url: https://registry.npmjs.org
+      - name: Install 🪄
+        run: pnpm install --frozen-lockfile
+      - name: Upgrade npm 🔧
+        # OIDC trusted publishing needs a recent npm CLI
+        run: npm install -g npm@latest
+      # A version already on npm cannot be republished, so re-running this job — after
+      # re-pushing a tag, or a manual re-run — would fail on a duplicate. Skip instead,
+      # so the tag is the source of truth and pushing one is always safe.
+      - name: Check npm for this version 🔍
+        id: published
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$name@$version is already published — skipping publish."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish 🚀
+        if: steps.published.outputs.exists == 'false'
+        run: npm publish --provenance --access public
+
+  github-release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v5
+      - name: Create release 🏷️
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+
   docker:
     name: Docker (build & push)
     runs-on: ubuntu-latest
     needs: test
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # id-token: write is required for cosign keyless signing
     permissions:
       contents: read
       packages: write
+      id-token: write
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v5
@@ -106,11 +182,14 @@ jobs:
             type=sha,format=short
 
       - name: Build & push 🚢
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          provenance: true
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -118,3 +197,9 @@ jobs:
             GIT_COMMIT_DATE=${{ steps.git.outputs.date }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Setup cosign 🔏
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image 🔏
+        run: cosign sign --yes "ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}"
