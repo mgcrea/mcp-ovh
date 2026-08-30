@@ -1,7 +1,7 @@
-import type { AuthMethod, Config } from "../config.js";
-import { oauth2TokenUrl } from "../config.js";
-import { OvhApiError } from "./errors.js";
-import { clockDelta, signRequest } from "./signature.js";
+import { OvhApiError } from "#/client/errors";
+import { clockDelta, signRequest } from "#/client/signature";
+import type { AuthMethod, Config } from "#/config";
+import { oauth2TokenUrl } from "#/config";
 
 export type Logger = {
   debug?(...args: unknown[]): void;

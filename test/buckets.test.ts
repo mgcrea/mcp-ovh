@@ -2,10 +2,10 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it, vi } from "vitest";
 
-import { staticAuthProvider } from "../src/client/auth.js";
-import { stripObjects, summarizeBucket } from "../src/client/shape.js";
-import type { Config } from "../src/config.js";
-import { createServer } from "../src/server.js";
+import { staticAuthProvider } from "#/client/auth";
+import { stripObjects, summarizeBucket } from "#/client/shape";
+import type { Config } from "#/config";
+import { createServer } from "#/server";
 
 const config: Config = {
   endpoint: "ovh-eu",

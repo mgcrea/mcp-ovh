@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { fetchServerTime } from "../client/auth.js";
-import type { OvhClient } from "../client/ovh.js";
-import { summarizeRegion } from "../client/shape.js";
-import { projectArg, regionArg, wrap } from "./util.js";
+import { fetchServerTime } from "#/client/auth";
+import type { OvhClient } from "#/client/ovh";
+import { summarizeRegion } from "#/client/shape";
+import { projectArg, regionArg, wrap } from "#/tools/util";
 
 type Rec = Record<string, unknown>;
 

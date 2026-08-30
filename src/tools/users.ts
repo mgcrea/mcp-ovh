@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { encodeSegment, type OvhClient } from "../client/ovh.js";
-import { summarizeEach, summarizeUser } from "../client/shape.js";
-import { compact, confirmArg, projectArg, userIdArg, wrap } from "./util.js";
+import { encodeSegment, type OvhClient } from "#/client/ovh";
+import { summarizeEach, summarizeUser } from "#/client/shape";
+import { compact, confirmArg, projectArg, userIdArg, wrap } from "#/tools/util";
 
 const OPENSTACK_ROLES = [
   "administrator",

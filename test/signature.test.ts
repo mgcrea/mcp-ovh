@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { clockDelta, signRequest } from "../src/client/signature.js";
+import { clockDelta, signRequest } from "#/client/signature";
 
 // Vectors computed independently of the implementation:
 //   printf '%s' 'AS+CK+METHOD+URL+BODY+TS' | openssl sha1

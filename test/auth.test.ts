@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createAuthProvider, fetchServerTime, requestOauth2Token } from "../src/client/auth.js";
-import { OvhApiError } from "../src/client/errors.js";
-import type { Config } from "../src/config.js";
+import { createAuthProvider, fetchServerTime, requestOauth2Token } from "#/client/auth";
+import { OvhApiError } from "#/client/errors";
+import type { Config } from "#/config";
 
 const baseConfig: Config = {
   endpoint: "ovh-eu",

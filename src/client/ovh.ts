@@ -1,5 +1,5 @@
-import type { AuthProvider, Logger } from "./auth.js";
-import { OvhApiError } from "./errors.js";
+import type { AuthProvider, Logger } from "#/client/auth";
+import { OvhApiError } from "#/client/errors";
 
 export type QueryValue = string | number | boolean | string[] | undefined;
 export type Query = Record<string, QueryValue>;

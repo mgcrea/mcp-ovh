@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { OvhApiError, WritesDisabledError } from "../client/errors.js";
+import { OvhApiError, WritesDisabledError } from "#/client/errors";
 
 export type ToolResult = {
   content: { type: "text"; text: string }[];

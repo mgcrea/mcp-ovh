@@ -5,7 +5,7 @@ export {
   USER_AGENT,
   type CreatedServer,
   type CreateServerOptions,
-} from "./server.js";
+} from "#/server";
 export {
   ENDPOINTS,
   ENDPOINT_NAMES,
@@ -16,7 +16,7 @@ export {
   type AuthMethod,
   type Config,
   type EndpointName,
-} from "./config.js";
+} from "#/config";
 export {
   createAuthProvider,
   fetchServerTime,
@@ -26,23 +26,23 @@ export {
   type Logger,
   type SignableRequest,
   type TokenResponse,
-} from "./client/auth.js";
-export { clockDelta, signRequest, type SignatureInput } from "./client/signature.js";
+} from "#/client/auth";
+export { clockDelta, signRequest, type SignatureInput } from "#/client/signature";
 export {
   buildQuery,
   encodeSegment,
   OvhClient,
   type OvhClientOptions,
   type Query,
-} from "./client/ovh.js";
-export { OvhApiError, WritesDisabledError } from "./client/errors.js";
+} from "#/client/ovh";
+export { OvhApiError, WritesDisabledError } from "#/client/errors";
 export {
   parsePolicyRaw,
   stripObjects,
   summarizeBucket,
   summarizeObject,
   summarizeUser,
-} from "./client/shape.js";
+} from "#/client/shape";
 export {
   buildPolicy,
   describePreset,
@@ -51,5 +51,5 @@ export {
   type BuildPolicyOptions,
   type PolicyDocument,
   type PolicyPreset,
-} from "./storage/policy.js";
-export { registerTools, type ToolContext } from "./tools/index.js";
+} from "#/storage/policy";
+export { registerTools, type ToolContext } from "#/tools/index";

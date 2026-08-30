@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { OvhClient } from "../client/ovh.js";
-import { stripObjects, summarizeBucket, summarizeEach } from "../client/shape.js";
+import type { OvhClient } from "#/client/ovh";
+import { stripObjects, summarizeBucket, summarizeEach } from "#/client/shape";
 import {
   bucketArg,
   compact,
@@ -11,7 +11,7 @@ import {
   projectArg,
   regionArg,
   wrap,
-} from "./util.js";
+} from "#/tools/util";
 
 type Rec = Record<string, unknown>;
 

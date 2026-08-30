@@ -1,14 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import type { OvhClient } from "../client/ovh.js";
-import { isConfigured, type Config } from "../config.js";
-import { registerBucketTools } from "./buckets.js";
-import { registerObjectTools } from "./objects.js";
-import { registerPolicyTools } from "./policies.js";
-import { registerProjectTools } from "./projects.js";
-import { registerRequestTool } from "./request.js";
-import { registerStatusTool } from "./status.js";
-import { registerUserTools } from "./users.js";
+import type { OvhClient } from "#/client/ovh";
+import { isConfigured, type Config } from "#/config";
+import { registerBucketTools } from "#/tools/buckets";
+import { registerObjectTools } from "#/tools/objects";
+import { registerPolicyTools } from "#/tools/policies";
+import { registerProjectTools } from "#/tools/projects";
+import { registerRequestTool } from "#/tools/request";
+import { registerStatusTool } from "#/tools/status";
+import { registerUserTools } from "#/tools/users";
 
 export type ToolContext = {
   config: Config;

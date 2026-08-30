@@ -1,9 +1,9 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { WritesDisabledError } from "../client/errors.js";
-import type { OvhClient } from "../client/ovh.js";
-import { wrap } from "./util.js";
+import { WritesDisabledError } from "#/client/errors";
+import type { OvhClient } from "#/client/ovh";
+import { wrap } from "#/tools/util";
 
 /**
  * Guard the escape hatch against being pointed somewhere it shouldn't go: at

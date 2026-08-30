@@ -8,7 +8,7 @@ import {
   resolveBaseUrl,
   isConfigured,
   setupInstructions,
-} from "../src/config.js";
+} from "#/config";
 
 const oauth2Env = { OVH_CLIENT_ID: "cid", OVH_CLIENT_SECRET: "csecret" };
 const signatureEnv = {

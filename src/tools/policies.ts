@@ -1,17 +1,25 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { encodeSegment, type OvhClient } from "../client/ovh.js";
-import { parsePolicyRaw, summarizeBucket } from "../client/shape.js";
+import { encodeSegment, type OvhClient } from "#/client/ovh";
+import { parsePolicyRaw, summarizeBucket } from "#/client/shape";
 import {
   buildPolicy,
   describePreset,
   encodePolicy,
   POLICY_PRESETS,
   type PolicyPreset,
-} from "../storage/policy.js";
-import { waitForUserReady } from "./users.js";
-import { bucketArg, compact, confirmArg, projectArg, regionArg, userIdArg, wrap } from "./util.js";
+} from "#/storage/policy";
+import { waitForUserReady } from "#/tools/users";
+import {
+  bucketArg,
+  compact,
+  confirmArg,
+  projectArg,
+  regionArg,
+  userIdArg,
+  wrap,
+} from "#/tools/util";
 
 type Rec = Record<string, unknown>;
 

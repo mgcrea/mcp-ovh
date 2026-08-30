@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildPolicy, encodePolicy, POLICY_PRESETS } from "../src/storage/policy.js";
+import { buildPolicy, encodePolicy, POLICY_PRESETS } from "#/storage/policy";
 
 /** Actions the policy ALLOWS — Deny statements are counted separately. */
 const actions = (preset: (typeof POLICY_PRESETS)[number], prefix?: string): string[] =>

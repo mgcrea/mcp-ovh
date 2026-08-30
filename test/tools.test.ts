@@ -2,12 +2,12 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { staticAuthProvider } from "../src/client/auth.js";
-import { OvhClient } from "../src/client/ovh.js";
-import type { Config } from "../src/config.js";
-import { createServer } from "../src/server.js";
-import { assertSafePath } from "../src/tools/request.js";
-import { waitForUserReady } from "../src/tools/users.js";
+import { staticAuthProvider } from "#/client/auth";
+import { OvhClient } from "#/client/ovh";
+import type { Config } from "#/config";
+import { createServer } from "#/server";
+import { assertSafePath } from "#/tools/request";
+import { waitForUserReady } from "#/tools/users";
 
 const baseConfig: Config = {
   endpoint: "ovh-eu",

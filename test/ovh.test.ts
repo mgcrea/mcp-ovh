@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { staticAuthProvider, type AuthProvider } from "../src/client/auth.js";
-import { OvhApiError } from "../src/client/errors.js";
-import { buildQuery, encodeSegment, OvhClient } from "../src/client/ovh.js";
+import { staticAuthProvider, type AuthProvider } from "#/client/auth";
+import { OvhApiError } from "#/client/errors";
+import { buildQuery, encodeSegment, OvhClient } from "#/client/ovh";
 
 const makeClient = (fetchImpl: ReturnType<typeof vi.fn>, auth?: AuthProvider): OvhClient =>
   new OvhClient({

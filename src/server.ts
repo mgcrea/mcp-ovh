@@ -1,10 +1,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { BUILD_INFO } from "./build-info.js";
-import { createAuthProvider, type AuthProvider, type Logger } from "./client/auth.js";
-import { OvhClient } from "./client/ovh.js";
-import type { Config } from "./config.js";
-import { registerTools } from "./tools/index.js";
+import { BUILD_INFO } from "#/build-info";
+import { createAuthProvider, type AuthProvider, type Logger } from "#/client/auth";
+import { OvhClient } from "#/client/ovh";
+import type { Config } from "#/config";
+import { registerTools } from "#/tools/index";
 
 export const SERVER_NAME = BUILD_INFO.name;
 export const SERVER_VERSION = BUILD_INFO.version;

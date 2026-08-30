@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import { encodeSegment, type OvhClient } from "../client/ovh.js";
-import { summarizeEach, summarizeObject } from "../client/shape.js";
+import { encodeSegment, type OvhClient } from "#/client/ovh";
+import { summarizeEach, summarizeObject } from "#/client/shape";
 import {
   bucketArg,
   compact,
@@ -12,7 +12,7 @@ import {
   projectArg,
   regionArg,
   wrap,
-} from "./util.js";
+} from "#/tools/util";
 
 const STORAGE_CLASSES = [
   "STANDARD",
