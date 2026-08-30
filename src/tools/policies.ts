@@ -54,6 +54,7 @@ export const registerPolicyTools = (
   server.registerTool(
     "ovh_get_storage_policy",
     {
+      title: "OVHcloud: Get Storage Policy",
       description:
         "Get a project user's storage policy — the raw S3 policy document that governs what " +
         "its S3 keys may do. OVH has no bucket policies: this ONE document per user is the " +
@@ -75,6 +76,7 @@ export const registerPolicyTools = (
   server.registerTool(
     "ovh_preview_policy",
     {
+      title: "OVHcloud: Preview Policy",
       description:
         "Build the policy document a preset would produce, WITHOUT applying it. Use this to " +
         "check the ARNs and actions before calling `ovh_set_storage_policy` or " +
@@ -95,6 +97,7 @@ export const registerPolicyTools = (
   server.registerTool(
     "ovh_set_storage_policy",
     {
+      title: "OVHcloud: Set Storage Policy",
       description:
         "REPLACE a project user's storage policy. There is one document per user, so this " +
         "overwrites everything that user could previously do across ALL buckets — read the " +
@@ -145,6 +148,7 @@ export const registerPolicyTools = (
   server.registerTool(
     "ovh_grant_bucket_access",
     {
+      title: "OVHcloud: Grant Bucket Access",
       description:
         "Grant a project user one of OVH's built-in roles on a bucket: `admin`, `readOnly`, " +
         "`readWrite` or `deny`. Simpler than a raw policy, but there is NO write-only role — " +
@@ -181,6 +185,7 @@ export const registerPolicyTools = (
   server.registerTool(
     "ovh_provision_s3_user",
     {
+      title: "OVHcloud: Provision S3 User",
       description:
         "Composite: create a project user, apply a policy preset scoped to one bucket, and mint " +
         "S3 credentials — the whole recipe for handing out a restricted key in one call. " +

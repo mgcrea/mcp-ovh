@@ -45,6 +45,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_list_objects",
     {
+      title: "OVHcloud: List Objects",
       description:
         "List the objects in a bucket. Use `prefix` to scope to a folder (`uploads/`) and " +
         '`delimiter: "/"` to get folder-style common prefixes instead of a flat recursive ' +
@@ -92,6 +93,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_get_object",
     {
+      title: "OVHcloud: Get Object",
       description:
         "Get one object's METADATA — size, etag, storage class, lock and replication status. " +
         "This does not download the content; use `ovh_presign_object` with method GET for that.",
@@ -110,6 +112,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_list_object_versions",
     {
+      title: "OVHcloud: List Object Versions",
       description:
         "List every stored version of one object, newest first, including delete markers. " +
         "Only a versioned bucket has more than one.",
@@ -138,6 +141,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_presign_object",
     {
+      title: "OVHcloud: Presign Object",
       description:
         "Mint a time-limited presigned S3 URL for one object — the only way to actually move " +
         "bytes through this server, which never proxies content itself. " +
@@ -184,6 +188,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_copy_object",
     {
+      title: "OVHcloud: Copy Object",
       description:
         "Server-side copy of an object, without the bytes leaving OVH. Pass `targetBucket` to " +
         "copy across buckets in the same region, or keep the same bucket and change " +
@@ -222,6 +227,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_delete_object",
     {
+      title: "OVHcloud: Delete Object",
       description:
         "Delete an object. On a VERSIONED bucket this only writes a delete marker — the data " +
         "stays (and keeps billing) until the versions are deleted too. On an unversioned " +
@@ -242,6 +248,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_delete_object_version",
     {
+      title: "OVHcloud: Delete Object Version",
       description:
         "PERMANENTLY delete one specific version of an object. Unlike `ovh_delete_object` this " +
         "destroys the data outright, with no delete marker and no recovery — it is how you " +
@@ -267,6 +274,7 @@ export const registerObjectTools = (
   server.registerTool(
     "ovh_bulk_delete_objects",
     {
+      title: "OVHcloud: Bulk Delete Objects",
       description:
         "Delete many objects in one call. Returns `deleted` and `errors` separately — a " +
         "partial failure is reported, not thrown, so always read both. Pass `versionId` on an " +

@@ -29,6 +29,7 @@ export const registerRequestTool = (
   server.registerTool(
     "ovh_request",
     {
+      title: "OVHcloud: Request",
       description:
         "Escape hatch: call any OVHcloud `/1.0` endpoint directly. Use it when no curated tool " +
         "fits — billing, domains, dedicated servers, Kubernetes, databases, IAM policies, or " +

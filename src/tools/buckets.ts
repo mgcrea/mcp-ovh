@@ -48,6 +48,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_list_buckets",
     {
+      title: "OVHcloud: List Buckets",
       description:
         "List the object storage buckets in a region, with their object count, total size and " +
         "owner. Note `ownerId`: an S3 policy is a NO-OP against the bucket owner, who always " +
@@ -64,6 +65,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_get_bucket",
     {
+      title: "OVHcloud: Get Bucket",
       description:
         "Get one bucket's configuration: versioning, encryption, object lock, replication, " +
         "lifecycle, tags and owner. Object listing is deliberately suppressed (the raw endpoint " +
@@ -86,6 +88,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_get_bucket_lifecycle",
     {
+      title: "OVHcloud: Get Bucket Lifecycle",
       description:
         "Get a bucket's lifecycle rules — expiration, storage-class transitions, noncurrent " +
         "version cleanup, and incomplete-multipart abort.",
@@ -101,6 +104,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_create_bucket",
     {
+      title: "OVHcloud: Create Bucket",
       description:
         "Create an object storage bucket. " +
         "Two settings are CREATE-TIME ONLY and cannot be added later: `objectLock` and, in " +
@@ -154,6 +158,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_update_bucket",
     {
+      title: "OVHcloud: Update Bucket",
       description:
         "Update a bucket in place: versioning, tags, encryption, replication or lifecycle. " +
         "Only the fields you pass are sent. Object lock cannot be changed here — it is " +
@@ -194,6 +199,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_set_bucket_lifecycle",
     {
+      title: "OVHcloud: Set Bucket Lifecycle",
       description:
         "Replace a bucket's lifecycle configuration. This REPLACES the whole document — read " +
         "the current one with `ovh_get_bucket_lifecycle` first and send it back with your rule " +
@@ -213,6 +219,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_delete_bucket_lifecycle",
     {
+      title: "OVHcloud: Delete Bucket Lifecycle",
       description:
         "Remove a bucket's lifecycle configuration entirely. Scheduled expirations and " +
         "transitions stop; nothing already deleted comes back.",
@@ -231,6 +238,7 @@ export const registerBucketTools = (
   server.registerTool(
     "ovh_delete_bucket",
     {
+      title: "OVHcloud: Delete Bucket",
       description:
         "DELETE A BUCKET. Irreversible, with no trash. OVH refuses to delete a bucket that " +
         "still holds objects (or, on a versioned bucket, any version or delete marker) — empty " +

@@ -11,6 +11,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
   server.registerTool(
     "ovh_whoami",
     {
+      title: "OVHcloud: Whoami",
       description:
         "Show which OVHcloud identity the server is authenticated as, which auth method is " +
         "live (oauth2 / signature / accessToken), the API endpoint, the default project and " +
@@ -56,6 +57,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
   server.registerTool(
     "ovh_list_projects",
     {
+      title: "OVHcloud: List Projects",
       description:
         "List the public cloud project ids (`serviceName`) this account can see. These 32-char " +
         "hex ids are what every other project-scoped tool takes — never the display name.",
@@ -90,6 +92,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
   server.registerTool(
     "ovh_get_project",
     {
+      title: "OVHcloud: Get Project",
       description: "Get one public cloud project: name, status, access level, plan and quotas.",
       inputSchema: { project: projectArg },
       annotations: { readOnlyHint: true },
@@ -100,6 +103,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
   server.registerTool(
     "ovh_list_regions",
     {
+      title: "OVHcloud: List Regions",
       description:
         "List the regions enabled on a project. Storage regions are upper-case (`GRA`, `SBG`, " +
         "`DE`, `UK`, `WAW`) and a bucket lives in exactly one of them.",
@@ -112,6 +116,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
   server.registerTool(
     "ovh_get_region",
     {
+      title: "OVHcloud: Get Region",
       description:
         "Get one region: its type, status, availability zones, and the per-service component " +
         "status (which tells you whether object storage is actually up there).",

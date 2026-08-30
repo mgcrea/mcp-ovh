@@ -85,6 +85,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_list_project_users",
     {
+      title: "OVHcloud: List Project Users",
       description:
         "List the project's OpenStack users. These — not your OVH account — are what S3 " +
         "credentials and storage policies attach to. The numeric `id` is what every " +
@@ -101,6 +102,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_get_project_user",
     {
+      title: "OVHcloud: Get Project User",
       description: "Get one project user with its OpenStack roles and status.",
       inputSchema: { project: projectArg, userId: userIdArg },
       annotations: { readOnlyHint: true },
@@ -111,6 +113,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_list_s3_credentials",
     {
+      title: "OVHcloud: List S3 Credentials",
       description:
         "List a user's S3 credentials. Only the access keys are returned — OVH never lists " +
         "secrets. Use `ovh_reveal_s3_secret` for the secret of one access key.",
@@ -126,6 +129,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_create_project_user",
     {
+      title: "OVHcloud: Create Project User",
       description:
         "Create a project user. This is the FIRST step to a restricted S3 key: because an S3 " +
         "policy cannot restrict a bucket's owner, a write-only or read-only key must belong to " +
@@ -162,6 +166,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_create_s3_credentials",
     {
+      title: "OVHcloud: Create S3 Credentials",
       description:
         "Mint a new S3 access key + secret for a project user. " +
         "THE SECRET IS RETURNED HERE AND CAN BE RE-READ ONLY VIA `ovh_reveal_s3_secret` — " +
@@ -178,6 +183,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_reveal_s3_secret",
     {
+      title: "OVHcloud: Reveal S3 Secret",
       description:
         "Reveal the secret key behind an existing S3 access key. Returns a live credential in " +
         "plain text — do not paste the result anywhere it will be persisted.",
@@ -199,6 +205,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_delete_s3_credentials",
     {
+      title: "OVHcloud: Delete S3 Credentials",
       description:
         "Revoke one S3 access key. Immediate — anything still using it starts failing with 403 " +
         "at once. The user and its other keys are untouched.",
@@ -219,6 +226,7 @@ export const registerUserTools = (
   server.registerTool(
     "ovh_delete_project_user",
     {
+      title: "OVHcloud: Delete Project User",
       description:
         "Delete a project user, along with every S3 credential and storage policy attached to " +
         "it. Irreversible. If this user OWNS any bucket, deal with the bucket first — an " +

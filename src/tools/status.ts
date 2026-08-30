@@ -13,6 +13,7 @@ export const registerStatusTool = (server: McpServer, ctx: ToolContext): void =>
   server.registerTool(
     "ovh_auth_status",
     {
+      title: "OVHcloud: Auth Status",
       description:
         "Report whether this server has working OVHcloud credentials, which auth method and " +
         "endpoint it uses, the default project and region, whether writes are enabled, and — " +
