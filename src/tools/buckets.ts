@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import type { OvhClient } from "#/client/ovh";
@@ -53,7 +53,7 @@ export const registerBucketTools = (
         "List the object storage buckets in a region, with their object count, total size and " +
         "owner. Note `ownerId`: an S3 policy is a NO-OP against the bucket owner, who always " +
         "keeps FULL_CONTROL through ACLs — a restricted key must belong to a different user.",
-      inputSchema: { project: projectArg, region: regionArg },
+      inputSchema: z.object({ project: projectArg, region: regionArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region }) =>
@@ -70,7 +70,7 @@ export const registerBucketTools = (
         "Get one bucket's configuration: versioning, encryption, object lock, replication, " +
         "lifecycle, tags and owner. Object listing is deliberately suppressed (the raw endpoint " +
         "embeds a deprecated array of EVERY object) — use `ovh_list_objects` for contents.",
-      inputSchema: { project: projectArg, region: regionArg, bucket: bucketArg },
+      inputSchema: z.object({ project: projectArg, region: regionArg, bucket: bucketArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region, bucket }) =>
@@ -92,7 +92,7 @@ export const registerBucketTools = (
       description:
         "Get a bucket's lifecycle rules — expiration, storage-class transitions, noncurrent " +
         "version cleanup, and incomplete-multipart abort.",
-      inputSchema: { project: projectArg, region: regionArg, bucket: bucketArg },
+      inputSchema: z.object({ project: projectArg, region: regionArg, bucket: bucketArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region, bucket }) =>
@@ -112,7 +112,7 @@ export const registerBucketTools = (
         "`ovh_update_bucket`. " +
         "`ownerId` decides who holds FULL_CONTROL forever — leave it unset to own the bucket as " +
         "the calling identity, and never point it at a user you later intend to restrict.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         name: z.string().min(1).describe("Bucket name. Must be unique within the region."),
@@ -134,7 +134,7 @@ export const registerBucketTools = (
           .optional()
           .describe("Project user id to own the bucket. Defaults to the calling identity."),
         tags: tagsArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async ({ project, region, name, versioning, encryption, objectLock, ownerId, tags }) =>
@@ -163,7 +163,7 @@ export const registerBucketTools = (
         "Update a bucket in place: versioning, tags, encryption, replication or lifecycle. " +
         "Only the fields you pass are sent. Object lock cannot be changed here — it is " +
         "create-time only.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -174,7 +174,7 @@ export const registerBucketTools = (
           .record(z.string(), z.unknown())
           .optional()
           .describe('Replication configuration: {"rules": [...]}.'),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
     async ({ project, region, bucket, versioning, tags, encryption, replication }) =>
@@ -204,12 +204,12 @@ export const registerBucketTools = (
         "Replace a bucket's lifecycle configuration. This REPLACES the whole document — read " +
         "the current one with `ovh_get_bucket_lifecycle` first and send it back with your rule " +
         "added, or the existing rules are dropped.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         lifecycle: lifecycleArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
     async ({ project, region, bucket, lifecycle }) =>
@@ -223,12 +223,12 @@ export const registerBucketTools = (
       description:
         "Remove a bucket's lifecycle configuration entirely. Scheduled expirations and " +
         "transitions stop; nothing already deleted comes back.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, region, bucket }) =>
@@ -243,12 +243,12 @@ export const registerBucketTools = (
         "DELETE A BUCKET. Irreversible, with no trash. OVH refuses to delete a bucket that " +
         "still holds objects (or, on a versioned bucket, any version or delete marker) — empty " +
         "it first with `ovh_bulk_delete_objects`.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, region, bucket }) =>

@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { WritesDisabledError } from "#/client/errors";
@@ -42,7 +42,7 @@ export const registerRequestTool = (
           ? "Writes are ENABLED, so POST/PUT/DELETE are permitted — there is no confirmation " +
             "step, so check the path before you call it."
           : "Writes are DISABLED: only GET is permitted. Set OVH_ALLOW_WRITES=1 to allow mutations."),
-      inputSchema: {
+      inputSchema: z.object({
         method: z.enum(methods).default("GET"),
         path: z
           .string()
@@ -53,7 +53,7 @@ export const registerRequestTool = (
           .optional()
           .describe("Query string parameters."),
         body: z.unknown().optional().describe("JSON request body, for POST/PUT/DELETE."),
-      },
+      }),
       annotations: { readOnlyHint: !allowWrites, destructiveHint: allowWrites },
     },
     async ({ method, path, query, body }) =>

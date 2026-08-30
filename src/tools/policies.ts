@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { encodeSegment, type OvhClient } from "#/client/ovh";
@@ -60,7 +60,7 @@ export const registerPolicyTools = (
         "its S3 keys may do. OVH has no bucket policies: this ONE document per user is the " +
         "whole access-control surface. " +
         OWNER_WARNING,
-      inputSchema: { project: projectArg, userId: userIdArg },
+      inputSchema: z.object({ project: projectArg, userId: userIdArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, userId }) =>
@@ -81,7 +81,7 @@ export const registerPolicyTools = (
         "Build the policy document a preset would produce, WITHOUT applying it. Use this to " +
         "check the ARNs and actions before calling `ovh_set_storage_policy` or " +
         "`ovh_provision_s3_user`.",
-      inputSchema: { bucket: bucketArg, preset: presetArg, prefix: prefixArg },
+      inputSchema: z.object({ bucket: bucketArg, preset: presetArg, prefix: prefixArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ bucket, preset, prefix }) =>
@@ -104,7 +104,7 @@ export const registerPolicyTools = (
         "current one with `ovh_get_storage_policy` first if the user has other access. " +
         "Pass either `preset` + `bucket` (+ optional `prefix`), or a raw `policy` document. " +
         OWNER_WARNING,
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         userId: userIdArg,
         preset: presetArg.optional(),
@@ -120,7 +120,7 @@ export const registerPolicyTools = (
               "`preset`. Use it for anything the presets don't cover.",
           ),
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, userId, preset, bucket, prefix, policy }) =>
@@ -156,7 +156,7 @@ export const registerPolicyTools = (
         "This writes the same underlying per-user document as `ovh_set_storage_policy`, so the " +
         "two overwrite each other. " +
         OWNER_WARNING,
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -169,7 +169,7 @@ export const registerPolicyTools = (
           .optional()
           .describe("Restrict the role to keys under this prefix. Omit for the whole bucket."),
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, region, bucket, userId, roleName, objectKey }) =>
@@ -195,7 +195,7 @@ export const registerPolicyTools = (
         "that owns the bucket, because a policy cannot restrict an owner. " +
         "Typical use: a write-only key for an app that uploads but must never read back — note " +
         "that `write-only` still allows overwriting existing keys inside the prefix.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -212,7 +212,7 @@ export const registerPolicyTools = (
               "wholesale. Rejected if this user owns the bucket.",
           ),
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
     },
     async ({ project, region, bucket, preset, prefix, description, userId }) =>

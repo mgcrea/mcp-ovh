@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { encodeSegment, type OvhClient } from "#/client/ovh";
@@ -90,7 +90,7 @@ export const registerUserTools = (
         "List the project's OpenStack users. These — not your OVH account — are what S3 " +
         "credentials and storage policies attach to. The numeric `id` is what every " +
         "user-scoped tool takes.",
-      inputSchema: { project: projectArg },
+      inputSchema: z.object({ project: projectArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project }) =>
@@ -104,7 +104,7 @@ export const registerUserTools = (
     {
       title: "OVHcloud: Get Project User",
       description: "Get one project user with its OpenStack roles and status.",
-      inputSchema: { project: projectArg, userId: userIdArg },
+      inputSchema: z.object({ project: projectArg, userId: userIdArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, userId }) => wrap(() => client.get(userPath(client, project, userId))),
@@ -117,7 +117,7 @@ export const registerUserTools = (
       description:
         "List a user's S3 credentials. Only the access keys are returned — OVH never lists " +
         "secrets. Use `ovh_reveal_s3_secret` for the secret of one access key.",
-      inputSchema: { project: projectArg, userId: userIdArg },
+      inputSchema: z.object({ project: projectArg, userId: userIdArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, userId }) =>
@@ -140,7 +140,7 @@ export const registerUserTools = (
         "next few seconds any write against its id (policy, S3 credentials) fails with a " +
         "misleading `404 user not found`. Poll `ovh_get_project_user` until the status is `ok`, " +
         "or use `ovh_provision_s3_user`, which waits for you.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         description: z
           .string()
@@ -154,7 +154,7 @@ export const registerUserTools = (
           .array(z.enum(OPENSTACK_ROLES))
           .optional()
           .describe("Several OpenStack roles at once. Mutually exclusive with `role`."),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async ({ project, description, role, roles }) =>
@@ -173,7 +173,7 @@ export const registerUserTools = (
         "capture it now. The key inherits whatever the user's storage policy allows, so set " +
         "the policy BEFORE handing the key out. " +
         "A just-created user returns `404 user not found` here until its status reaches `ok`.",
-      inputSchema: { project: projectArg, userId: userIdArg },
+      inputSchema: z.object({ project: projectArg, userId: userIdArg }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
     async ({ project, userId }) =>
@@ -187,11 +187,11 @@ export const registerUserTools = (
       description:
         "Reveal the secret key behind an existing S3 access key. Returns a live credential in " +
         "plain text — do not paste the result anywhere it will be persisted.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         userId: userIdArg,
         access: z.string().min(1).describe("The S3 access key."),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
     async ({ project, userId, access }) =>
@@ -209,12 +209,12 @@ export const registerUserTools = (
       description:
         "Revoke one S3 access key. Immediate — anything still using it starts failing with 403 " +
         "at once. The user and its other keys are untouched.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         userId: userIdArg,
         access: z.string().min(1).describe("The S3 access key to revoke."),
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, userId, access }) =>
@@ -231,7 +231,7 @@ export const registerUserTools = (
         "Delete a project user, along with every S3 credential and storage policy attached to " +
         "it. Irreversible. If this user OWNS any bucket, deal with the bucket first — an " +
         "ownerless bucket is painful to recover.",
-      inputSchema: { project: projectArg, userId: userIdArg, confirm: confirmArg },
+      inputSchema: z.object({ project: projectArg, userId: userIdArg, confirm: confirmArg }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, userId }) => wrap(() => client.del(userPath(client, project, userId))),

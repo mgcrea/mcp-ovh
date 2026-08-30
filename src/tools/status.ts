@@ -1,4 +1,5 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
 
 import { isConfigured, setupInstructions } from "#/config";
 import type { ToolContext } from "#/tools/index";
@@ -19,7 +20,7 @@ export const registerStatusTool = (server: McpServer, ctx: ToolContext): void =>
         "endpoint it uses, the default project and region, whether writes are enabled, and — " +
         "when something is missing — exactly what to set. Call this first when a tool you " +
         "expected is not listed: an absent tool here means missing configuration, not a bug.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () =>

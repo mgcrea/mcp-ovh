@@ -1,4 +1,5 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
 
 import { fetchServerTime } from "#/client/auth";
 import type { OvhClient } from "#/client/ovh";
@@ -19,7 +20,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
         "Call this FIRST when another tool returns 401 or 403 — a 401 on the signature method " +
         "is usually clock drift, and a 403 is nearly always a consumer key whose access rules " +
         "do not cover the path.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () =>
@@ -61,7 +62,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
       description:
         "List the public cloud project ids (`serviceName`) this account can see. These 32-char " +
         "hex ids are what every other project-scoped tool takes — never the display name.",
-      inputSchema: {},
+      inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
     async () =>
@@ -94,7 +95,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
     {
       title: "OVHcloud: Get Project",
       description: "Get one public cloud project: name, status, access level, plan and quotas.",
-      inputSchema: { project: projectArg },
+      inputSchema: z.object({ project: projectArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project }) => wrap(() => client.get(client.projectPath(project))),
@@ -107,7 +108,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
       description:
         "List the regions enabled on a project. Storage regions are upper-case (`GRA`, `SBG`, " +
         "`DE`, `UK`, `WAW`) and a bucket lives in exactly one of them.",
-      inputSchema: { project: projectArg },
+      inputSchema: z.object({ project: projectArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project }) => wrap(() => client.get<string[]>(client.projectPath(project, "/region"))),
@@ -120,7 +121,7 @@ export const registerProjectTools = (server: McpServer, client: OvhClient): void
       description:
         "Get one region: its type, status, availability zones, and the per-service component " +
         "status (which tells you whether object storage is actually up there).",
-      inputSchema: { project: projectArg, region: regionArg },
+      inputSchema: z.object({ project: projectArg, region: regionArg }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region }) =>

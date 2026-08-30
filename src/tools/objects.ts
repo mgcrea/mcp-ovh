@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 import { encodeSegment, type OvhClient } from "#/client/ovh";
@@ -50,7 +50,7 @@ export const registerObjectTools = (
         "List the objects in a bucket. Use `prefix` to scope to a folder (`uploads/`) and " +
         '`delimiter: "/"` to get folder-style common prefixes instead of a flat recursive ' +
         "listing. Paginate with `keyMarker` from the last key of the previous page.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -75,7 +75,7 @@ export const registerObjectTools = (
             "Include every version and delete marker, not just current objects. Only " +
               "meaningful on a versioned bucket.",
           ),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region, bucket, limit, ...filters }) =>
@@ -97,12 +97,12 @@ export const registerObjectTools = (
       description:
         "Get one object's METADATA — size, etag, storage class, lock and replication status. " +
         "This does not download the content; use `ovh_presign_object` with method GET for that.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         key: objectKeyArg,
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region, bucket, key }) =>
@@ -116,14 +116,14 @@ export const registerObjectTools = (
       description:
         "List every stored version of one object, newest first, including delete markers. " +
         "Only a versioned bucket has more than one.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         key: objectKeyArg,
         limit: limitArg,
         versionIdMarker: z.string().optional().describe("Resume after this version id."),
-      },
+      }),
       annotations: { readOnlyHint: true },
     },
     async ({ project, region, bucket, key, limit, versionIdMarker }) =>
@@ -151,7 +151,7 @@ export const registerObjectTools = (
           : "Writes are disabled, so only GET is offered.") +
         " The URL carries the credentials of the CALLING identity, so anyone holding it has " +
         "that access until it expires — treat it as a secret.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -169,7 +169,7 @@ export const registerObjectTools = (
           .describe("Lifetime in seconds (max 7 days). Defaults to 1 hour."),
         versionId: z.string().optional().describe("Target a specific version, for GET or DELETE."),
         storageClass: storageClassArg,
-      },
+      }),
       annotations: { readOnlyHint: !allowWrites, destructiveHint: false },
     },
     async ({ project, region, bucket, key, method, expire, versionId, storageClass }) =>
@@ -193,7 +193,7 @@ export const registerObjectTools = (
         "Server-side copy of an object, without the bytes leaving OVH. Pass `targetBucket` to " +
         "copy across buckets in the same region, or keep the same bucket and change " +
         "`storageClass` to move an object between storage tiers in place.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -205,7 +205,7 @@ export const registerObjectTools = (
         targetKey: z.string().optional().describe("Destination key. Defaults to the source key."),
         storageClass: storageClassArg,
         versionId: z.string().optional().describe("Copy this specific version of the source."),
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
     async ({ project, region, bucket, key, targetBucket, targetKey, storageClass, versionId }) =>
@@ -232,13 +232,13 @@ export const registerObjectTools = (
         "Delete an object. On a VERSIONED bucket this only writes a delete marker — the data " +
         "stays (and keeps billing) until the versions are deleted too. On an unversioned " +
         "bucket it is immediate and irreversible.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         key: objectKeyArg,
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, region, bucket, key }) =>
@@ -253,14 +253,14 @@ export const registerObjectTools = (
         "PERMANENTLY delete one specific version of an object. Unlike `ovh_delete_object` this " +
         "destroys the data outright, with no delete marker and no recovery — it is how you " +
         "actually reclaim space on a versioned bucket.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
         key: objectKeyArg,
         versionId: z.string().min(1).describe("Version id, from `ovh_list_object_versions`."),
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, region, bucket, key, versionId }) =>
@@ -280,7 +280,7 @@ export const registerObjectTools = (
         "partial failure is reported, not thrown, so always read both. Pass `versionId` on an " +
         "entry to purge that exact version rather than write a delete marker. " +
         "This is how you empty a bucket before deleting it.",
-      inputSchema: {
+      inputSchema: z.object({
         project: projectArg,
         region: regionArg,
         bucket: bucketArg,
@@ -295,7 +295,7 @@ export const registerObjectTools = (
           .max(1000)
           .describe("Objects to delete, up to 1000 per call."),
         confirm: confirmArg,
-      },
+      }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     },
     async ({ project, region, bucket, objects }) =>
