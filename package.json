@@ -1,5 +1,5 @@
 {
-  "name": "@mgcrea/mcp-ovh-api",
+  "name": "@mgcrea/mcp-ovh",
   "version": "0.2.1",
   "description": "Model Context Protocol server for the OVHcloud API, focused on Object Storage",
   "keywords": [
@@ -14,10 +14,10 @@
   "author": "Olivier Louvignes <olivier@mgcrea.io>",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mgcrea/mcp-ovh-api.git"
+    "url": "git+https://github.com/mgcrea/mcp-ovh.git"
   },
   "bin": {
-    "ovh-api-mcp": "./dist/cli.js"
+    "ovh-mcp": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -51,7 +51,7 @@
     "release": "pnpm dlx release-it",
     "docker:build": "BUILDER=build scripts/docker-build.sh",
     "docker:buildx": "BUILDER=buildx scripts/docker-build.sh",
-    "docker:push": "docker push mgcrea/mcp-ovh-api:latest && docker push mgcrea/mcp-ovh-api:$npm_package_version",
+    "docker:push": "docker push mgcrea/mcp-ovh:latest && docker push mgcrea/mcp-ovh:$npm_package_version",
     "docker:release": "BUILDER=buildx scripts/docker-build.sh --push",
     "prepublishOnly": "pnpm build"
   },

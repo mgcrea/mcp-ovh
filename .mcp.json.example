@@ -2,7 +2,7 @@
   "mcpServers": {
     "ovh": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-ovh-api/dist/cli.js"],
+      "args": ["/absolute/path/to/mcp-ovh/dist/cli.js"],
       "env": {
         "OVH_ENDPOINT": "ovh-eu",
         "OVH_CLIENT_ID": "...",

@@ -16,7 +16,7 @@ const readPackageJson = (): PackageJson => {
     const pkgUrl = new URL("../package.json", import.meta.url);
     return JSON.parse(readFileSync(pkgUrl, "utf8")) as PackageJson;
   } catch {
-    return { name: "@mgcrea/mcp-ovh-api", version: "0.0.0" };
+    return { name: "@mgcrea/mcp-ovh", version: "0.0.0" };
   }
 };
 

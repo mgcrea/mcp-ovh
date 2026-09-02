@@ -89,7 +89,7 @@ export class OvhClient {
     this.maxRetries = opts.maxRetries ?? 3;
     this.fetchImpl = opts.fetch ?? fetch;
     this.logger = opts.logger;
-    this.userAgent = opts.userAgent ?? "mcp-ovh-api-js";
+    this.userAgent = opts.userAgent ?? "mcp-ovh-js";
   }
 
   get authMethod(): string {

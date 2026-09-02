@@ -7,10 +7,10 @@ import { createServer } from "#/server";
 
 const stderrLogger = {
   debug: (...args: unknown[]) => {
-    if (process.env.OVH_DEBUG) console.error("[ovh-api-mcp]", ...args);
+    if (process.env.OVH_DEBUG) console.error("[ovh-mcp]", ...args);
   },
-  warn: (...args: unknown[]) => console.error("[ovh-api-mcp]", ...args),
-  error: (...args: unknown[]) => console.error("[ovh-api-mcp]", ...args),
+  warn: (...args: unknown[]) => console.error("[ovh-mcp]", ...args),
+  error: (...args: unknown[]) => console.error("[ovh-mcp]", ...args),
 };
 
 const main = async (): Promise<void> => {
@@ -22,7 +22,7 @@ const main = async (): Promise<void> => {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   stderrLogger.warn(
-    `ovh-api-mcp connected (endpoint=${config.endpoint}, auth=${config.authMethod ?? "MISSING"}, ` +
+    `ovh-mcp connected (endpoint=${config.endpoint}, auth=${config.authMethod ?? "MISSING"}, ` +
       `project=${config.cloudProject ?? "-"}, region=${config.region ?? "-"}, ` +
       `writes=${config.allowWrites ? "ENABLED" : "disabled"})`,
   );
@@ -40,6 +40,6 @@ const main = async (): Promise<void> => {
 };
 
 main().catch((err: unknown) => {
-  console.error("[ovh-api-mcp] fatal:", err);
+  console.error("[ovh-mcp] fatal:", err);
   process.exit(1);
 });

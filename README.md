@@ -1,7 +1,7 @@
-# @mgcrea/mcp-ovh-api
+# @mgcrea/mcp-ovh
 
-[![npm version](https://img.shields.io/npm/v/@mgcrea/mcp-ovh-api.svg?style=for-the-badge)](https://www.npmjs.com/package/@mgcrea/mcp-ovh-api)
-[![GHCR](https://img.shields.io/badge/ghcr.io-container_image-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/mgcrea/mcp-ovh-api/pkgs/container/mcp-ovh-api)
+[![npm version](https://img.shields.io/npm/v/@mgcrea/mcp-ovh.svg?style=for-the-badge)](https://www.npmjs.com/package/@mgcrea/mcp-ovh)
+[![GHCR](https://img.shields.io/badge/ghcr.io-container_image-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/mgcrea/mcp-ovh/pkgs/container/mcp-ovh)
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server for the **OVHcloud API**,
 focused on **Object Storage**: buckets, objects, project users, S3 credentials and the
@@ -105,7 +105,7 @@ Add to `.mcp.json` (project) or `~/.claude.json` (global):
   "mcpServers": {
     "ovh": {
       "command": "node",
-      "args": ["/absolute/path/to/mcp-ovh-api/dist/cli.js"],
+      "args": ["/absolute/path/to/mcp-ovh/dist/cli.js"],
       "env": {
         "OVH_CLIENT_ID": "...",
         "OVH_CLIENT_SECRET": "...",
