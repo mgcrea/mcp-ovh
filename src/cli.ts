@@ -24,7 +24,8 @@ const main = async (): Promise<void> => {
   stderrLogger.warn(
     `ovh-mcp connected (endpoint=${config.endpoint}, auth=${config.authMethod ?? "MISSING"}, ` +
       `project=${config.cloudProject ?? "-"}, region=${config.region ?? "-"}, ` +
-      `writes=${config.allowWrites ? "ENABLED" : "disabled"})`,
+      `writes=${config.allowWrites ? "ENABLED" : "disabled"}, ` +
+      `secretDir=${config.secretDir ?? "-"})`,
   );
   if (!isConfigured(config)) {
     stderrLogger.warn("  not configured — only ovh_auth_status is available:");

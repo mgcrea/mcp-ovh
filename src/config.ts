@@ -47,6 +47,11 @@ const ConfigSchema = z
     /** Default storage region, e.g. `GRA`, `SBG`, `UK`. Upper-cased for you. */
     region: z.string().min(1).optional(),
     allowWrites: z.boolean().default(false),
+    /**
+     * When set, a tool's `secretFile` must resolve inside this directory.
+     * Unset, any absolute path is accepted.
+     */
+    secretDir: z.string().min(1).optional(),
     maxRetries: z.number().int().nonnegative().max(10).default(3),
     refreshSkewSeconds: z.number().int().nonnegative().max(300).default(60),
   })
@@ -143,6 +148,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv = process.env): Config => {
     cloudProject: trimmed(env.OVH_CLOUD_PROJECT),
     region: trimmed(env.OVH_REGION)?.toUpperCase(),
     allowWrites: parseBool(env.OVH_ALLOW_WRITES),
+    secretDir: trimmed(env.OVH_SECRET_DIR),
     maxRetries: parseIntOpt(env.OVH_MAX_RETRIES),
     refreshSkewSeconds: parseIntOpt(env.OVH_REFRESH_SKEW_SECONDS),
   });

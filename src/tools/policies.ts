@@ -10,6 +10,12 @@ import {
   POLICY_PRESETS,
   type PolicyPreset,
 } from "#/storage/policy";
+import {
+  checkSecretFile,
+  SECRET_FILE_NOTE,
+  secretFileArg,
+  writeSecretFile,
+} from "#/tools/secret-file";
 import { waitForUserReady } from "#/tools/users";
 import {
   bucketArg,
@@ -50,6 +56,7 @@ export const registerPolicyTools = (
   server: McpServer,
   client: OvhClient,
   allowWrites: boolean,
+  secretDir?: string,
 ): void => {
   server.registerTool(
     "ovh_get_storage_policy",
@@ -190,7 +197,8 @@ export const registerPolicyTools = (
         "Composite: create a project user, apply a policy preset scoped to one bucket, and mint " +
         "S3 credentials — the whole recipe for handing out a restricted key in one call. " +
         "RETURNS A LIVE ACCESS KEY AND SECRET in plain text; the secret is shown here and " +
-        "nowhere else afterwards. " +
+        "nowhere else afterwards — pass `secretFile` to write it to a file instead of this " +
+        "conversation. " +
         "It first reads the bucket and REFUSES to proceed if you point it at an existing user " +
         "that owns the bucket, because a policy cannot restrict an owner. " +
         "Typical use: a write-only key for an app that uploads but must never read back — note " +
@@ -211,12 +219,16 @@ export const registerPolicyTools = (
             "Reuse an EXISTING project user instead of creating one. Its policy is replaced " +
               "wholesale. Rejected if this user owns the bucket.",
           ),
+        secretFile: secretFileArg,
         confirm: confirmArg,
       }),
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
     },
-    async ({ project, region, bucket, preset, prefix, description, userId }) =>
+    async ({ project, region, bucket, preset, prefix, description, userId, secretFile }) =>
       wrap(async () => {
+        // Before anything else: a bad path must not leave a user and a key behind.
+        const target = secretFile ? await checkSecretFile(secretFile, secretDir) : undefined;
+
         const container = summarizeBucket(
           await client.get<Rec>(client.storagePath(project, region, bucket), { noObjects: true }),
         );
@@ -259,7 +271,9 @@ export const registerPolicyTools = (
           client.projectPath(project, `/user/${encodeSegment(String(newUserId))}/s3Credentials`),
         );
 
-        return {
+        const endpoint = `https://s3.${String(client.region(region)).toLowerCase()}.io.cloud.ovh.net`;
+        const s3Region = client.region(region).toLowerCase();
+        const summary = {
           bucket: { name: container.name, region: container.region, ownerId },
           user: {
             id: newUserId,
@@ -269,16 +283,49 @@ export const registerPolicyTools = (
             created: userId === undefined,
           },
           policy: { preset: preset as PolicyPreset, grants: describePreset(preset), document },
-          credentials: {
+        };
+
+        if (!target) {
+          return {
+            ...summary,
+            credentials: {
+              access: credentials.access,
+              secret: credentials.secret,
+              endpoint,
+              region: s3Region,
+            },
+            warning:
+              "The secret above is shown once. Store it now. Verify the key with the real S3 API " +
+              "before handing it over — a policy that looks right can still be shadowed by bucket " +
+              "ownership.",
+          };
+        }
+
+        await writeSecretFile(
+          target,
+          {
             access: credentials.access,
             secret: credentials.secret,
-            endpoint: `https://s3.${String(client.region(region)).toLowerCase()}.io.cloud.ovh.net`,
-            region: client.region(region).toLowerCase(),
+            userId: newUserId,
+            username: user.username,
+            bucket,
+            region: s3Region,
+            endpoint,
           },
+          `S3 access key ${String(credentials.access)} of user ${newUserId} WAS minted` +
+            (userId === undefined ? ", and that user was created by this call" : "") +
+            `: revoke it with \`ovh_delete_s3_credentials\`` +
+            (userId === undefined ? " or delete the user with `ovh_delete_project_user`" : "") +
+            ".",
+        );
+        return {
+          ...summary,
+          credentials: { access: credentials.access, endpoint, region: s3Region },
+          secretFile: target,
+          note: SECRET_FILE_NOTE,
           warning:
-            "The secret above is shown once. Store it now. Verify the key with the real S3 API " +
-            "before handing it over — a policy that looks right can still be shadowed by bucket " +
-            "ownership.",
+            "Verify the key with the real S3 API before handing it over — a policy that looks " +
+            "right can still be shadowed by bucket ownership.",
         };
       }),
   );

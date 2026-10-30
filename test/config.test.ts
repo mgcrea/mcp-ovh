@@ -109,6 +109,13 @@ describe("loadConfig", () => {
     );
   });
 
+  it("leaves secretFile paths unconfined unless OVH_SECRET_DIR is set", () => {
+    expect(loadConfig(oauth2Env).secretDir).toBeUndefined();
+    expect(loadConfig({ ...oauth2Env, OVH_SECRET_DIR: " /srv/secrets " }).secretDir).toBe(
+      "/srv/secrets",
+    );
+  });
+
   it("lets OVH_API_URL override the endpoint's host", () => {
     expect(loadConfig({ ...oauth2Env, OVH_API_URL: "https://proxy.internal/1.0/" }).baseUrl).toBe(
       "https://proxy.internal/1.0",

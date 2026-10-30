@@ -17,7 +17,8 @@ export const registerStatusTool = (server: McpServer, ctx: ToolContext): void =>
       title: "OVHcloud: Auth Status",
       description:
         "Report whether this server has working OVHcloud credentials, which auth method and " +
-        "endpoint it uses, the default project and region, whether writes are enabled, and — " +
+        "endpoint it uses, the default project and region, whether writes are enabled, the " +
+        "OVH_SECRET_DIR that `secretFile` paths are confined to, and — " +
         "when something is missing — exactly what to set. Call this first when a tool you " +
         "expected is not listed: an absent tool here means missing configuration, not a bug.",
       inputSchema: z.object({}),
@@ -31,6 +32,7 @@ export const registerStatusTool = (server: McpServer, ctx: ToolContext): void =>
         project: ctx.config.cloudProject ?? null,
         region: ctx.config.region ?? null,
         writes: ctx.allowWrites ? "enabled" : "disabled",
+        secretDir: ctx.config.secretDir ?? null,
         setup: setupInstructions(ctx.config),
       })),
   );

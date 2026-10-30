@@ -3,6 +3,12 @@ import { z } from "zod";
 
 import { encodeSegment, type OvhClient } from "#/client/ovh";
 import { summarizeEach, summarizeUser } from "#/client/shape";
+import {
+  checkSecretFile,
+  SECRET_FILE_NOTE,
+  secretFileArg,
+  writeSecretFile,
+} from "#/tools/secret-file";
 import { compact, confirmArg, projectArg, userIdArg, wrap } from "#/tools/util";
 
 const OPENSTACK_ROLES = [
@@ -81,6 +87,7 @@ export const registerUserTools = (
   server: McpServer,
   client: OvhClient,
   allowWrites: boolean,
+  secretDir?: string,
 ): void => {
   server.registerTool(
     "ovh_list_project_users",
@@ -135,7 +142,8 @@ export const registerUserTools = (
         "policy cannot restrict a bucket's owner, a write-only or read-only key must belong to " +
         "a user that did NOT create the bucket. " +
         "`objectstore_operator` is the role for object storage. Creating a user also mints an " +
-        "OpenStack password, which is returned once and never again. " +
+        "OpenStack password, which is returned once and never again — pass `secretFile` to " +
+        "write it to a file instead of this conversation. " +
         'The user is created ASYNCHRONOUSLY and comes back with `status: "creating"` — for the ' +
         "next few seconds any write against its id (policy, S3 credentials) fails with a " +
         "misleading `404 user not found`. Poll `ovh_get_project_user` until the status is `ok`, " +
@@ -154,13 +162,27 @@ export const registerUserTools = (
           .array(z.enum(OPENSTACK_ROLES))
           .optional()
           .describe("Several OpenStack roles at once. Mutually exclusive with `role`."),
+        secretFile: secretFileArg,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
-    async ({ project, description, role, roles }) =>
-      wrap(() =>
-        client.post(client.projectPath(project, "/user"), compact({ description, role, roles })),
-      ),
+    async ({ project, description, role, roles, secretFile }) =>
+      wrap(async () => {
+        const target = secretFile ? await checkSecretFile(secretFile, secretDir) : undefined;
+        const user = await client.post<Rec>(
+          client.projectPath(project, "/user"),
+          compact({ description, role, roles }),
+        );
+        if (!target) return user;
+        const { password, ...rest } = user;
+        await writeSecretFile(
+          target,
+          { username: user.username, password, userId: user.id },
+          `Project user ${String(user.id)} (${String(user.username)}) WAS created with a new ` +
+            `password: delete it with \`ovh_delete_project_user\` and create another.`,
+        );
+        return { ...rest, secretFile: target, note: SECRET_FILE_NOTE };
+      }),
   );
 
   server.registerTool(
@@ -170,14 +192,29 @@ export const registerUserTools = (
       description:
         "Mint a new S3 access key + secret for a project user. " +
         "THE SECRET IS RETURNED HERE AND CAN BE RE-READ ONLY VIA `ovh_reveal_s3_secret` — " +
-        "capture it now. The key inherits whatever the user's storage policy allows, so set " +
-        "the policy BEFORE handing the key out. " +
+        "capture it now, or pass `secretFile` to keep it out of this conversation. The key " +
+        "inherits whatever the user's storage policy allows, so set the policy BEFORE handing " +
+        "the key out. " +
         "A just-created user returns `404 user not found` here until its status reaches `ok`.",
-      inputSchema: z.object({ project: projectArg, userId: userIdArg }),
+      inputSchema: z.object({ project: projectArg, userId: userIdArg, secretFile: secretFileArg }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
     },
-    async ({ project, userId }) =>
-      wrap(() => client.post(userPath(client, project, userId, "/s3Credentials"))),
+    async ({ project, userId, secretFile }) =>
+      wrap(async () => {
+        const target = secretFile ? await checkSecretFile(secretFile, secretDir) : undefined;
+        const credentials = await client.post<Rec>(
+          userPath(client, project, userId, "/s3Credentials"),
+        );
+        if (!target) return credentials;
+        const { secret, ...rest } = credentials;
+        await writeSecretFile(
+          target,
+          { access: credentials.access, secret, userId },
+          `S3 access key ${String(credentials.access)} of user ${userId} WAS minted: revoke it ` +
+            `with \`ovh_delete_s3_credentials\` and mint another.`,
+        );
+        return { ...rest, secretFile: target, note: SECRET_FILE_NOTE };
+      }),
   );
 
   server.registerTool(
@@ -186,20 +223,31 @@ export const registerUserTools = (
       title: "OVHcloud: Reveal S3 Secret",
       description:
         "Reveal the secret key behind an existing S3 access key. Returns a live credential in " +
-        "plain text — do not paste the result anywhere it will be persisted.",
+        "plain text — do not paste the result anywhere it will be persisted. Pass `secretFile` " +
+        "to write it to a file instead of this conversation.",
       inputSchema: z.object({
         project: projectArg,
         userId: userIdArg,
         access: z.string().min(1).describe("The S3 access key."),
+        secretFile: secretFileArg,
       }),
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },
-    async ({ project, userId, access }) =>
-      wrap(() =>
-        client.post(
+    async ({ project, userId, access, secretFile }) =>
+      wrap(async () => {
+        const target = secretFile ? await checkSecretFile(secretFile, secretDir) : undefined;
+        const revealed = await client.post<Rec>(
           userPath(client, project, userId, `/s3Credentials/${encodeSegment(access)}/secret`),
-        ),
-      ),
+        );
+        if (!target) return revealed;
+        await writeSecretFile(
+          target,
+          { access, secret: revealed.secret, userId },
+          `Nothing was minted: the secret of S3 access key ${access} was only revealed. Call ` +
+            `again with another \`secretFile\`.`,
+        );
+        return { userId, access, secretFile: target, note: SECRET_FILE_NOTE };
+      }),
   );
 
   server.registerTool(

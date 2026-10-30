@@ -24,6 +24,9 @@ off — they are never registered, so an agent cannot call them at all.
   embeds _every_ object in the bucket) is suppressed on both ends.
 - `X-Ovh-QueryID` is surfaced on every error, because that is the first thing OVH support
   asks for.
+- A `secretFile` parameter on every tool that mints or reveals a secret, so the secret can
+  go to a `0600` file instead of the conversation (see
+  [Keeping secrets out of the transcript](#keeping-secrets-out-of-the-transcript)).
 - An `ovh_request` escape hatch for the rest of the API (GET-only unless writes are enabled).
 - Native `fetch`, no runtime dependencies beyond the MCP SDK and Zod.
 
@@ -85,6 +88,7 @@ cp .env.example .env
 | `OVH_CLOUD_PROJECT`                   | no       | Default project — the 32-char hex `serviceName`, not the display name. |
 | `OVH_REGION`                          | no       | Default storage region, upper-case (`GRA`, `SBG`, `DE`, `UK`).         |
 | `OVH_ALLOW_WRITES`                    | no       | Set to `1` to register the write tools. Off by default.                |
+| `OVH_SECRET_DIR`                      | no       | Confine every `secretFile` to this directory (absolute path).          |
 | `OVH_API_URL`                         | no       | Override the API base URL entirely.                                    |
 | `OVH_MAX_RETRIES`                     | no       | Retry budget for 401 / 429 / 5xx. Defaults to `3`.                     |
 | `OVH_REFRESH_SKEW_SECONDS`            | no       | Refresh the OAuth2 token this long before expiry. Defaults to `60`.    |
@@ -207,7 +211,8 @@ ovh_provision_s3_user    bucket=dev-rgis-ar preset=write-only prefix=uploads/ \
 
 That creates a _new_ project user (never the bucket owner), applies the policy, and only then
 mints credentials — a key that exists before its policy is a key that briefly had whatever the
-default allows. The secret is returned once.
+default allows. The secret is returned once — add `secretFile=/abs/path.json` to have it
+written to a `0600` file instead of the conversation.
 
 Verify against the real S3 API before handing it over — a policy that reads correctly can
 still be shadowed by ownership, and **wait ~30s after setting it** or you will be probing the
@@ -227,6 +232,50 @@ S3=(aws --endpoint-url https://s3.uk.io.cloud.ovh.net --region uk s3api)
 
 The `get-object` line is the one that matters: it is the check that catches trap 3, and it
 passes only because of the preset's `Deny`.
+
+## Keeping secrets out of the transcript
+
+Four tools return a live secret: `ovh_create_s3_credentials` and `ovh_reveal_s3_secret` (an S3
+secret), `ovh_provision_s3_user` (an S3 access key and secret) and `ovh_create_project_user`
+(an OpenStack password). By default it comes back in the tool result, which means it lands in
+the assistant's transcript, and from there in whatever history the client keeps.
+
+Pass `secretFile` to any of the four and the secret goes to that file instead. The result then
+carries only the non-secret fields (user id, username, access key, endpoint), the path, and a
+note that the secret is not in it.
+
+```
+ovh_provision_s3_user  bucket=dev-rgis-ar preset=write-only prefix=uploads/ \
+                       secretFile=/Users/me/.secrets/ar-uploader.json confirm=true
+```
+
+```json
+{
+  "access": "...",
+  "secret": "...",
+  "userId": 9001,
+  "username": "user-...",
+  "bucket": "dev-rgis-ar",
+  "region": "uk",
+  "endpoint": "https://s3.uk.io.cloud.ovh.net"
+}
+```
+
+The S3 tools write `access`, `secret` and `userId` (provisioning adds the fields above);
+`ovh_create_project_user` writes `username`, `password` and `userId`.
+
+- The path must be **absolute** and its **directory must already exist** — nothing is created
+  for you but the file.
+- The file is created exclusively with mode `0600`: an existing file, or a symlink in its
+  place, is refused and never overwritten.
+- The path is checked **before** the OVH call, so a bad path does not mint a credential that
+  then has nowhere to go. If the write still fails afterwards, the error names what was minted
+  (access key, user id — never the secret) so you can revoke it.
+- With `OVH_SECRET_DIR` set, the file must resolve inside that directory. Its parent is resolved
+  through `realpath`, so a symlink inside the directory that points elsewhere is refused.
+  Unset, any absolute path is accepted.
+
+Without `secretFile` the tools behave exactly as before.
 
 ## Develop
 

@@ -29,13 +29,14 @@ export type ToolContext = {
  */
 export const registerTools = (server: McpServer, client: OvhClient, ctx: ToolContext): void => {
   const { allowWrites } = ctx;
+  const { secretDir } = ctx.config;
   registerStatusTool(server, ctx);
   if (!isConfigured(ctx.config)) return;
 
   registerProjectTools(server, client);
   registerBucketTools(server, client, allowWrites);
   registerObjectTools(server, client, allowWrites);
-  registerUserTools(server, client, allowWrites);
-  registerPolicyTools(server, client, allowWrites);
+  registerUserTools(server, client, allowWrites, secretDir);
+  registerPolicyTools(server, client, allowWrites, secretDir);
   registerRequestTool(server, client, allowWrites);
 };
