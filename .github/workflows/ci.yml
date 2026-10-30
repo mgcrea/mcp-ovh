@@ -114,7 +114,9 @@ jobs:
         with:
           node-version: lts/*
           cache: "pnpm"
-          registry-url: https://registry.npmjs.org
+          # No `registry-url`: it makes setup-node write an .npmrc token line with a
+          # placeholder NODE_AUTH_TOKEN, which npm sends instead of exchanging the OIDC
+          # token, and the registry answers the bogus token with a 404 on publish.
       - name: Install 🪄
         run: pnpm install --frozen-lockfile
       - name: Upgrade npm 🔧
