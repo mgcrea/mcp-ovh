@@ -1,6 +1,6 @@
 {
   "name": "@mgcrea/mcp-ovh",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Model Context Protocol server for the OVHcloud API, focused on Object Storage",
   "keywords": [
     "mcp",
